@@ -5,18 +5,32 @@ using System.Linq;
 
 public class LevelBuilder : MonoBehaviour {
 
+	/*
+	Notes/Todo
+	Make it so that the less a roadtype is used that the probability of being selected of said roadtype increases
+	StreamLine BuildStraightRoad() with SimplifyDirection():
+		Created function SimplifyDirection which simplfies/normilzes the a direction. Usefull for creating staights. 
+	Seems that the finish line is placed on top of prexisting road
+		:Made a solution but was forgeting to change position. Thus this occurs. Rewrite with out lines 150. CreateSingleLevel() and make it change the postion instead. 
+		:Will this now take into account when broken ??/ Seems to work when broken just fine.
+	C# wat. Why you no like pointers!?!?
+	lol what is happening ?
+	*/
+
 	[SerializeField] private GameObject rStraight;
 	[SerializeField] private GameObject rTurn;
+	[SerializeField] private GameObject rFinished;
 	[SerializeField] private bool inFiniteLevel = false;
 	[SerializeField] private const int RoadCount = 100;
 	[SerializeField] private float padding = 0.01f;
-	
+
 
 	public enum RoadType
 	{
 		m_null = -1,
 		roadstraight = 0,
 		roadTurn = 1,
+		roadCheckerd = 2
 	}
 	public enum RoadDirection
 	{
@@ -40,11 +54,11 @@ public class LevelBuilder : MonoBehaviour {
 		public RoadType type;
 		public RoadDirection direction;
 		public Quaternion rotation;
-		public Vector2 pos; 
+		public Vector2 pos;
 		public GameObject m_GameObjectPrefabType;
 		public GameObject m_GameObjectInstance;
 		public SpriteRenderer m_renderer;
-		public bool isActive;
+		public bool isActive;	//Gets passed to false when hit
 		//Contructor
 		public Roads(bool act)
 		{
@@ -59,25 +73,26 @@ public class LevelBuilder : MonoBehaviour {
 		}
 
 	}
+
+
 	private Roads[] roads = new Roads[RoadCount];
 	private Roads lastRoad;
 	private Vector2 m_checked = new Vector2(0, 0);
 	private Vector2[] roadPositions = new Vector2[RoadCount + 1];
+	private MenuManager menu;
+
 	private float sizeOfRoad = 128;
-	private float ppOfRoad  = 50;
+	private float ppOfRoad = 50;
 	private float inGameUnitsSize;
 	private float looserOfPicked = 0;
+	private int PositionOfCheckeredFlagInArray = 0;
 	private int LastAddRoad = 0;
+	private bool CheckIfCompleted = false;
 
 
-	void Start () {
-		/*
-		Notes/Todo
-		Make it so that the less a roadtype is used that the probability of being selected of said roadtype increases
-		lol what is happening ?
-		*/
+	void Start() {
+		menu = GetComponent<MenuManager>();
 		inGameUnitsSize = sizeOfRoad / ppOfRoad - padding;
-		
 		////RoadArray setup//////
 		for (int i = 0; i < RoadCount; i++)
 		{
@@ -99,34 +114,46 @@ public class LevelBuilder : MonoBehaviour {
 	}
 	void FixedUpdate()
 	{
+		//Debug.Log("PositionOfCheckeredFlagInArray: " + PositionOfCheckeredFlagInArray);
 		if (inFiniteLevel)
 		{
-			InFiniteLevelCreation();		
+			InFiniteLevelCreation();
+		}
+		if (!roads[PositionOfCheckeredFlagInArray].isActive && roads[PositionOfCheckeredFlagInArray].type == RoadType.roadCheckerd)
+		{
+			menu.RestartLevel();
 		}
 		
 
 	}
 	private bool CreateSingleLevel()
 	{
-		Random random = new Random();	
+		int tmp = 0;
+		Random random = new Random();
 		for (int i = 0; i < RoadCount; i++)
 		{
-			bool done = false;
+			tmp = i;
+			bool BuildSuccess = false;
 			roads[i].type = (RoadType)Random.Range(0, 2);
 			if (roads[i].type == RoadType.roadstraight)
 			{
-				done = BuildStraightRoad(i);
+				BuildSuccess = BuildStraightRoad(i);
 			}
-			if (done)
+			if (BuildSuccess)
 				continue;
 
-			done = BuildTurnRoad(i);
-			if (!done)
+			BuildSuccess = BuildTurnRoad(i);
+			if (!BuildSuccess)
 			{
+				CheckIfCompleted = FinishLevel(i);
+				PositionOfCheckeredFlagInArray = i;
 				Debug.Log("Broken " + i);
 				return false;
-			}
+			}						
 		}
+		PositionOfCheckeredFlagInArray = tmp;						//Was not changing the postion of the flag so this appeard to be the case. Not true, I think.
+		lastRoad = roads[RoadCount - 2];							//This happens because 'lastRoad' is set to 'RoadCount - 1' on last intereration of the for loop
+		CheckIfCompleted = FinishLevel(RoadCount -1);               //When checking for the last collion. Could be rewritten to take of such exception, in theory.	Debug.Log(roads[9].direction);Debug.Log(roads[8].direction);Debug.Log(lastRoad.direction);														
 		return true;
 	}
 	private bool InFiniteLevelCreation()
@@ -310,8 +337,8 @@ public class LevelBuilder : MonoBehaviour {
 			Debug.Log("Acutally pos " + roads[i].pos + "CheckPos :" + m_checked + "I:" + i + "Dir" + roads[i].direction);
 			roads[i].type = RoadType.roadTurn;
 			return false;
-		}	
-	}                                                                   //Returns false if a collision is found. Else true
+		}
+	}                                                                   //Returns false if a collision is found. Else true: Sets dircetion and position as well as updates the lastRoad object
 	private bool BuildTurnRoad(int CurrentIncrement)
 	{
 		int i = CurrentIncrement;
@@ -383,9 +410,9 @@ public class LevelBuilder : MonoBehaviour {
 			return true;
 		}
 		else
-		{					
+		{
 			//Debug.Log("Collision on corner. Old direction:" + roads[i].direction + "Pos:" + roads[i].pos);
-			Debug.Log("Acutally pos " + roads[i].pos + "CheckPos :" + m_checked + "I:" + i + "Dir" + roads[i].direction);
+			//Debug.Log("Acutally pos " + roads[i].pos + "CheckPos :" + m_checked + "I:" + i + "Dir" + roads[i].direction);
 			roads[i].direction = (RoadDirection)looserOfPicked;
 			if (CheckCollision(roads[i].direction, roads[i].pos, roadPositions, ref m_checked))
 				return false;
@@ -398,22 +425,23 @@ public class LevelBuilder : MonoBehaviour {
 			//Debug.Log("Collision on corner. New direction:" + roads[i].direction + "Pos:" + roads[i].pos);
 			//Debug.Break();
 		}
-	}																		  //Returns false if a collision is found. Else true
+	}                                                                       //Returns false if a collision is found. Else true: Sets dircetion and position as well as updates the lastRoad object
 	private void MakeRoad(ref Roads road)
 	{
 		switch (road.type)
 		{
 			case RoadType.roadstraight: road.m_GameObjectPrefabType = rStraight; break;
 			case RoadType.roadTurn: road.m_GameObjectPrefabType = rTurn; break;
+			case RoadType.roadCheckerd: road.m_GameObjectPrefabType = rFinished; break;
 			default: return;
 		}
 		switch (road.direction)
 		{
 			/////////////For Straights/////////////////
-			case RoadDirection.up: road.rotation = Quaternion.Euler(0, 0, 0);  break;
-			case RoadDirection.down: road.rotation = Quaternion.Euler(0, 0, 180);  break;
-			case RoadDirection.right: road.rotation = Quaternion.Euler(0, 0, -90);  break;
-			case RoadDirection.left: road.rotation = Quaternion.Euler(0, 0, 90);  break;
+			case RoadDirection.up: road.rotation = Quaternion.Euler(0, 0, 0); break;
+			case RoadDirection.down: road.rotation = Quaternion.Euler(0, 0, 180); break;
+			case RoadDirection.right: road.rotation = Quaternion.Euler(0, 0, -90); break;
+			case RoadDirection.left: road.rotation = Quaternion.Euler(0, 0, 90); break;
 			case RoadDirection.left_to_up: road.rotation = Quaternion.Euler(0, 0, 0); break;
 			case RoadDirection.left_to_down: road.rotation = Quaternion.Euler(0, 0, 90); break;
 			case RoadDirection.right_to_up: road.rotation = Quaternion.Euler(0, 0, -90); break;
@@ -427,8 +455,46 @@ public class LevelBuilder : MonoBehaviour {
 		road.m_GameObjectPrefabType.transform.position = road.pos;
 		road.m_GameObjectPrefabType.transform.rotation = road.rotation;
 		road.isActive = true;
-		road.m_GameObjectInstance = Instantiate(road.m_GameObjectPrefabType);	
+		road.m_GameObjectInstance = Instantiate(road.m_GameObjectPrefabType);
 	}
+	private bool FinishLevel(int CurrentIncrement)
+	{
+		int i = CurrentIncrement;
+		roads[i].type = RoadType.roadCheckerd;
+		roads[i].direction = SimplifyDirection(lastRoad.direction);
+		if (roads[i].direction == RoadDirection.m_null)
+			return false;
+		//lastRoad = roads[i];
+		MakeRoad(ref roads[i]);
+		return true;
+	}
+	private RoadDirection SimplifyDirection(RoadDirection dir)
+	{
+		switch (dir)
+		{
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			////////////////////////////////////////////From straights to straights//////////////////////////////////////////////////
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			case RoadDirection.up: return RoadDirection.up;
+			case RoadDirection.down: return RoadDirection.down;
+			case RoadDirection.left: return RoadDirection.left;
+			case RoadDirection.right: return RoadDirection.right;
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			////////////////////////////////////////////From coners to straights/////////////////////////////////////////////////////
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			case RoadDirection.up_to_right: return RoadDirection.right;
+			case RoadDirection.down_to_right: return RoadDirection.right;
+			case RoadDirection.up_to_left: return RoadDirection.left;
+			case RoadDirection.down_to_left: return RoadDirection.left;
+			case RoadDirection.left_to_down: return RoadDirection.down;
+			case RoadDirection.left_to_up: return RoadDirection.up;
+			case RoadDirection.right_to_down: return RoadDirection.down;
+			case RoadDirection.right_to_up: return RoadDirection.up;
+
+		}
+		return RoadDirection.m_null;
+
+	}															  //Takes in a RoadDirection and returns the absolute last direction. Eg Returns RoadDirection.up from input RoadDirection.right_to_up  
 	private void DeleteRoad()
 	{
 		bool endLoop = false;
@@ -494,6 +560,7 @@ public class LevelBuilder : MonoBehaviour {
 			if (instObject == roads[i].m_GameObjectInstance)
 			{
 				roads[i].isActive = false;
+				Debug.Log(roads[i].type + "i:" + i);
 				break;
 			}
 		}
