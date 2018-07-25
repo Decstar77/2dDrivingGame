@@ -11,10 +11,10 @@ public class SingleLevelGenerator : MonoBehaviour {
 	LevelBuilder2 level;
 	
 	void Start () {
-		LevelBuilder2 level = GetComponent<LevelBuilder2>();
-		level.Init();
-		LevelBuilder2.Vertices vert = level.GetRootVert();
-		vert = level.ActivateRandomAdjacentVert(vert);
+		//LevelBuilder2 level = GetComponent<LevelBuilder2>();
+		//level.Init();
+		//LevelBuilder2.Vertices vert = level.GetRootVert();
+		//vert = level.ActivateRandomAdjacentVert(vert);
 
 
 	}

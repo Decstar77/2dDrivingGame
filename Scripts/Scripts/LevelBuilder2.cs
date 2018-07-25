@@ -8,6 +8,8 @@ public class LevelBuilder2 {
 	 Could have much better privacy status for structs. Made use funtions;
 	 Better random choosing of next edge
 	 Most of the class can never have a vert with the degree with more than 4. Espiecally FillCylce(); If the if of positions.x
+	 Ativevert() TEMPLATE PLZ!!!
+
 	*/
 
 
@@ -28,7 +30,7 @@ public class LevelBuilder2 {
 		public int index;
 		public int pathIndex;
 		public int activeEdges;
-		public Vertices(bool act, int amountOfedges, float x, float y, int m_index)
+		public Vertices(bool act, int amountOfedges, float x, float y, int m_index = -1)
 		{
 			edge = new Edges[amountOfedges];
 			degree = amountOfedges;
@@ -46,37 +48,9 @@ public class LevelBuilder2 {
 	private Vertices lastVert;
 	private float sizeOfUnit;
 	private int midIndex = 0;
-	private int activeVertAmount = 0; //Can used to get the amount of active verts or to get the next empty index in pathArray. HOWEVER BEFORE INC'ING IT, inc after activating another vert. eg Init()
+	private int pathVertAmount = 0; //Can used to get the amount of active verts or to get the next empty index in pathArray. HOWEVER BEFORE INC'ING IT, inc after activating another vert. eg Init()
+	private int activeVertAmount = 0;
 
-
-
-	void Start()
-	{
-
-	}
-	void Update()
-	{
-
-	}
-	public void Init()
-	{
-		sizeOfUnit = 128;
-		verts = new Vertices[RoadCountWidth * RoadCountHeight];
-		vertsPath = new Vertices[25];
-		InitializeVerts();
-		Vector2 middle = new Vector2(RoadCountWidth / 2, RoadCountHeight / 2);
-		midIndex = GetIndex((int)middle.x, (int)middle.y);
-		verts[midIndex].active = true;		
-		verts[midIndex].pathIndex = activeVertAmount;
-		activeVertAmount++;
-		verts[midIndex].index = midIndex;
-		ActivateConnectedEdges(ref verts[midIndex]);
-		vertsPath[verts[midIndex].pathIndex] = verts[midIndex];
-		lastVert = verts[midIndex];
-
-		//Tests
-
-	}
 	private void InitializeVerts()
 	{
 
@@ -143,29 +117,181 @@ public class LevelBuilder2 {
 			}
 		}
 	}
+	void Start()
+	{
+
+	}
+	void Update()
+	{
+
+	}
+	public bool CompareVerts(Vertices vert1, Vertices vert2)
+	{
+		if (vert1.active == vert2.active &&
+			vert1.index == vert2.index &&
+			vert1.pos == vert2.pos)
+			return true;
+		return false;
+	}
+	public bool CheckVecArray(Vector2 needsChecking, Vector2[] array)
+	{
+		for (int i = 0; i < array.Length; i++)
+		{
+			if (needsChecking == array[i])
+				return true;
+		}
+		return false;
+	}
+	public bool CheckVertArray(Vertices needChecking, Vertices[] array)
+	{
+		for (int i = 0; i < array.Length; i++)
+		{
+			if (CompareVerts(needChecking, array[i]))
+				return true;
+		}
+		return false;
+	}
+	public void Init()
+	{
+		sizeOfUnit = 128;
+		verts = new Vertices[RoadCountWidth * RoadCountHeight];
+		vertsPath = new Vertices[25];
+		InitializeVerts();
+		Vector2 middle = new Vector2(RoadCountWidth / 2, RoadCountHeight / 2);
+		midIndex = GetIndex((int)middle.x, (int)middle.y);
+		verts[midIndex].active = true;
+		activeVertAmount++;
+		verts[midIndex].pathIndex = pathVertAmount;
+		pathVertAmount++;
+		verts[midIndex].index = midIndex;
+		ActivateConnectedEdges(ref verts[midIndex]);
+		vertsPath[verts[midIndex].pathIndex] = verts[midIndex];
+		lastVert = verts[midIndex];
+
+		//Tests
+
+	}	
+ 	public void ActivateInbetweens(Vertices vert1, Vertices vert2, bool AddToPath = true)
+	{
+		if (vert1.pos.x == vert2.pos.x && vert1.pos.y == vert2.pos.y)
+		{
+			Debug.Log("Verts have no Inbetweens");
+			return;
+		}
+		bool dir = false;//False is the end vert is to the left or right; true is the end vert in above or below 
+		int incDir = 0;
+		if (vert1.pos.x == vert2.pos.x)
+			dir = true;
+			
+		if (dir)
+		{
+			int amounts = Mathf.Abs((int)vert1.pos.y - (int)vert2.pos.y) -1;
+			if (amounts == 0)
+				return;	
+
+			if (vert1.pos.y > vert2.pos.y)
+			{
+				incDir = 1; 
+			}
+			else
+			{
+				incDir = -1;
+			}
+			for (int i = 1; i <= amounts; i++)
+			{
+				Vector2 vec = new Vector2(vert2.pos.x, vert2.pos.y + incDir*i);
+				int index = GetIndex(vec);
+				if (verts[index].active)
+					continue;
+				ActivateVert(index, false, AddToPath);
+			}
+		}
+		else 
+		{
+			int amounts = Mathf.Abs((int)vert1.pos.x - (int)vert2.pos.x) -1 ;
+			Debug.Log("sd" + amounts);
+			if (amounts == 0)
+				return;
+			
+			if (vert1.pos.x > vert2.pos.x)
+			{
+				incDir = 1; 
+			}
+			else
+			{
+				incDir = -1;
+			}
+			for (int i = 1; i <= amounts; i++)
+			{
+				Vector2 vec = new Vector2(vert2.pos.x + incDir * i, vert2.pos.y);
+				int index = GetIndex(vec);
+				if (verts[index].active)
+					continue;
+				ActivateVert(index, false, AddToPath);
+			}
+		}
+	}
 	public void FillCylce(int indexStart, int indexEnd)
 	{
-		int cycleLenth = (activeVertAmount + 1) - verts[indexEnd].pathIndex; //Haven't acrtivated the indexStart vert thus plus 1
+		int cycleLenth = Mathf.Abs(verts[indexStart].pathIndex - verts[indexEnd].pathIndex) + 1; //Haven't acrtivated the indexStart vert thus plus 1
+		Debug.Log("CycleLength: " + cycleLenth);
 		if (cycleLenth < 8)
 			return;
 		Vertices[] cycle = new Vertices[cycleLenth];
 		for (int i = 0; i < cycleLenth; i++) // Prehaps ???
 		{
-			cycle[i] = verts[verts[indexStart].pathIndex - i];
+			cycle[i] = GetVertPath(verts[indexStart].pathIndex - i);
 		}
-		bool Check = false; //False is the end vert is to the left or right; true is the end vert in above or below 
-		if (verts[indexStart].pos.x == verts[indexEnd].pos.x)
-			Check = true;
-
-		if (Check)
+		
+		Vertices vertStart = GetVert(indexStart);
+		Vertices vertEnd = GetVert(indexEnd);
+		if (vertStart.pos.y == vertEnd.pos.y)
 		{
-			//Check up
-			
+			Debug.Log("Starting fill");
+			for (int i = 0; i < cycleLenth; i++)
+			{
+				for (int ii = 0; ii < cycleLenth; ii++)
+				{
+					Vector2 posUp = new Vector2(cycle[i].pos.x, cycle[i].pos.y + 1 + ii);
+					Vector2 posDown = cycle[i].pos + new Vector2(0, -1 - ii);
+					if (posUp.y >= RoadCountHeight)
+					{
+						Debug.Log("BreakingRoadCountHeight");
+						break;
+					}
+					if (posDown.y < 0)
+					{
+						Debug.Log("BreakingRoadCountHeight");
+						break;
+					}
+					if (CheckVertArray(GetVert(posUp), cycle))
+					{
+						if (ii == 0)
+							break;
+						Vertices vert = GetVert(GetIndex(posUp));
+						ActivateInbetweens(vert, cycle[i], false);
+						Debug.Log("FoundUp: pos ");
+						break;
+					}
+					if (CheckVertArray(GetVert(posDown), cycle))
+					{
+						if (ii == 0)
+							break;
+						Vertices vert = GetVert(GetIndex(posDown));
+						ActivateInbetweens(vert, cycle[i], false);
+						Debug.Log("FoundDown");	
+						break;
+					}
+					
+				}
+					
+			}
 		}
 		else
 		{
 
 		}
+
 
 	}
 	public void NextVert()
@@ -182,10 +308,14 @@ public class LevelBuilder2 {
 			dir = i;
 			index = lastVert.edge[dir].indexTo;
 		}// Redo somehow
+
+
 		if (verts[index].activeEdges > 1)
 		{
 			int indexEnd = GetVertConnectedToEdgeIndex(true, verts[index], lastVert);
-			FillCylce(index, indexEnd);
+			Debug.Log("Cycle, index");
+			ActivateVert(index);
+			FillCylce(index, indexEnd);	
 		}
 		else
 		{
@@ -217,7 +347,7 @@ public class LevelBuilder2 {
 		{
 			if (verts[i].active == activeStatus)
 			{
-				Debug.Log("Degree: " + verts[i].degree + "Index: " + verts[i].index + "Pos: " + verts[i].pos);
+				DisplayVert(verts[i]);
 			}
 		}
 	}
@@ -247,6 +377,88 @@ public class LevelBuilder2 {
 		}
 		vert.activeEdges = vert.degree;
 	}
+	public void ChangeVert(int index, Vertices vert)
+	{
+		verts[index] = vert;
+	}
+	public int GetVertConnectedToEdgeIndex(bool statusVert, Vertices vertCase, Vertices vertIgnor)
+	{
+		for (int i = 0; i < vertCase.degree; i++)
+		{
+			int index = vertCase.edge[i].indexTo;
+			if (index != vertIgnor.index && verts[index].active == statusVert)
+			{
+				return index;
+			}
+		}
+		return -1;
+	}
+	public int ActivateVert(Vertices vert, bool SetLastVert = true, bool AddToPath = true)
+	{
+		int index = vert.index;
+		verts[index].active = true;
+		activeVertAmount++;
+		if (AddToPath)
+		{
+			verts[index].pathIndex = pathVertAmount;
+			vertsPath[verts[index].pathIndex] = verts[index];
+			pathVertAmount++;
+		}
+		ActivateConnectedEdges(ref verts[index]);		
+		if (SetLastVert)
+			lastVert = verts[index];
+		return verts[index].pathIndex;
+	}
+	public int ActivateVert(int index, bool SetLastVert = true, bool AddToPath = true)
+	{
+		verts[index].active = true;
+		activeVertAmount++;
+		if (AddToPath)
+		{
+			verts[index].pathIndex = pathVertAmount;
+			vertsPath[verts[index].pathIndex] = verts[index];
+			pathVertAmount++;
+		}
+		ActivateConnectedEdges(ref verts[index]);		
+		if (SetLastVert)
+			lastVert = verts[index];
+		return verts[index].pathIndex;
+	}
+	public int ActivateVert(Vector2 pos, bool SetLastVert = true, bool AddToPath = true)
+	{
+		int index = GetIndex((int)pos.x, (int)pos.y);
+		verts[index].active = true;
+		activeVertAmount++;
+		if (AddToPath)
+		{
+			verts[index].pathIndex = pathVertAmount;
+			vertsPath[verts[index].pathIndex] = verts[index];
+			pathVertAmount++;
+		}
+		ActivateConnectedEdges(ref verts[index]);		
+		if (SetLastVert)
+			lastVert = verts[index];
+		return verts[index].pathIndex;
+	}
+	public int GetIndex(int x, int y)
+	{
+		if (x >= RoadCountWidth || y >= RoadCountHeight)
+			return -1;
+		return x * (int)RoadCountWidth + y;
+	}
+	public int GetIndex(Vector2 vec)
+	{
+		if (vec.x >= RoadCountWidth || vec.y >= RoadCountHeight)
+			return -1;
+		return (int)vec.x * (int)RoadCountWidth + (int)vec.y;
+	}
+	public int GetStatusVertAmount(bool activeState)
+	{
+		if (activeState)
+			return pathVertAmount;
+		else
+			return (int)RoadCountHeight * (int)RoadCountWidth - pathVertAmount;
+	}
 	public Vertices GetVertConnectedToEdge(bool statusVert, Vertices vertCase, Vertices vertIgnor)
 	{
 		for (int i = 0; i < vertCase.degree; i++)
@@ -259,29 +471,6 @@ public class LevelBuilder2 {
 		}
 		return new Vertices();
 	}
-	public int GetVertConnectedToEdgeIndex(bool statusVert, Vertices vertCase, Vertices vertIgnor)
-	{
-		for (int i = 0; i < vertCase.degree; i++)
-		{
-			int index = vertCase.edge[i].indexTo;
-			if (index != vertIgnor.index && verts[index].active == statusVert)
-			{
-				return vertIgnor.index;
-			}
-		}
-		return -1;
-	}
-	public Vertices ActivateVert(Vertices vert)
-	{
-		int index = vert.index;
-		verts[index].active = true;
-		verts[index].pathIndex = activeVertAmount;
-		activeVertAmount++;
-		ActivateConnectedEdges(ref verts[index]);
-		vertsPath[verts[index].pathIndex] = verts[index];
-		lastVert = verts[midIndex];
-		return verts[index];
-	}
 	public Vertices ActivateRandomAdjacentVert(Vertices vert)
 	{
 		int dir = Random.Range(0, vert.degree);
@@ -289,41 +478,11 @@ public class LevelBuilder2 {
 		ActivateVert(indexTo);
 		return GetVert(indexTo);
 	}
-	public int ActivateVert(int index)
+	public Vertices GetVertPath(int pIndex)
 	{
-		verts[index].active = true;
-		verts[index].pathIndex = activeVertAmount;
-		activeVertAmount++;
-		ActivateConnectedEdges(ref verts[index]);
-		vertsPath[verts[index].pathIndex] = verts[index];
-		lastVert = verts[midIndex];
-		return verts[index].pathIndex;
-	}
-	public int ActivateVert(Vector2 pos)
-	{
-		int index = GetIndex((int)pos.x, (int)pos.y);
-		verts[index].active = true;
-		verts[index].pathIndex = activeVertAmount;
-		activeVertAmount++;
-		ActivateConnectedEdges(ref verts[index]);
-		vertsPath[verts[index].pathIndex] = verts[index];
-		lastVert = verts[midIndex];
-		return verts[index].pathIndex;
-	}
-	public int GetIndex(int x, int y)
-	{
-		return x * (int)RoadCountWidth + y;
-	}
-	public int GetStatusVertAmount(bool activeState)
-	{
-		if (activeState)
-			return activeVertAmount;
-		else
-			return (int)RoadCountHeight * (int)RoadCountWidth - activeVertAmount;
-	}
-	public Vertices GetVertPath(int index)
-	{
-		return vertsPath[index];
+		if (pIndex < 0 || pIndex > pathVertAmount)
+			return new Vertices();
+		return vertsPath[pIndex];
 	}
 	public Vertices GetVert(int index)
 	{
@@ -359,6 +518,38 @@ public class LevelBuilder2 {
 			}
 		}
 		return rVerts;
+	}
+	public int[] GetStatusIntArr(bool activeState)
+	{
+		int[] arr;
+		int lastCount = 0;
+		if (activeState)
+			arr = new int[activeVertAmount];
+		else
+			arr = new int[RoadCountHeight * RoadCountWidth - activeVertAmount];
+
+		for (int i = 0; i < activeVertAmount; i++)
+		{
+			for (int ii = lastCount; ii < RoadCountHeight * RoadCountWidth; ii++)
+			{
+				if (verts[ii].active == activeState)
+				{
+					arr[i] = verts[ii].index;
+					lastCount = ii + 1;
+					break;
+				}
+			}
+		}
+		return arr;
+	}
+	public int[] GetIntPathArr()
+	{
+		int []arr = new int[pathVertAmount];
+		for (int i = 0; i < pathVertAmount; i++)
+		{
+			arr[i] = vertsPath[i].index; 
+		}
+		return arr;
 	}
 	public uint GetRoadCountWidth()
 	{
