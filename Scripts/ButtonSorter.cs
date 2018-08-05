@@ -8,7 +8,12 @@ public class ButtonSorter : MonoBehaviour {
 	[SerializeField] RectTransform ButtonRight;
 	[SerializeField] RectTransform ButtonAccel;
 	[SerializeField] RectTransform ButtonBrake;
-
+	[SerializeField] private float TurnButtonsHeight = 0.2f;
+	[SerializeField] private float TurnButtonsWidth = 0.2f;
+	[SerializeField] private float AccelerationgWidth = 0.2f;
+	[SerializeField] private float AccelerationgHeight = 0.4f;
+	[SerializeField] private float BrakeWidth = 0.2f;
+	[SerializeField] private float BrakeHeight = 0.2f;
 	private RectTransform canvas;
 
 
@@ -16,12 +21,15 @@ public class ButtonSorter : MonoBehaviour {
 		Screen.orientation = ScreenOrientation.Portrait;
 		canvas = GetComponent<RectTransform>();
 		Vector2 canvasOriigin = canvas.rect.position;
+		ButtonLeft.sizeDelta = new Vector2(canvas.rect.width * TurnButtonsWidth, canvas.rect.height * TurnButtonsHeight);
+		ButtonRight.sizeDelta = new Vector2(canvas.rect.width * TurnButtonsWidth, canvas.rect.height * TurnButtonsHeight);
+		ButtonAccel.sizeDelta = new Vector2(canvas.rect.width * AccelerationgWidth, canvas.rect.height * AccelerationgHeight);
+		ButtonBrake.sizeDelta = new Vector2(canvas.rect.width * BrakeWidth, canvas.rect.height * BrakeHeight);
 		
-		//ButtonLeft.rect.position = new Vector2(50f, 50f);
-		ButtonLeft.transform.SetPositionAndRotation(new Vector3(ButtonLeft.rect.width/2, ButtonLeft.rect.height/2,-2), Quaternion.Euler(0, 0, 0));
-		ButtonRight.transform.SetPositionAndRotation(new Vector3(ButtonRight.rect.width*1.5f + 50f, ButtonRight.rect.height / 2, -2), Quaternion.Euler(0, 0, 0));
-		ButtonAccel.transform.SetPositionAndRotation(new Vector3(canvas.rect.width - ButtonAccel.rect.width/2, ButtonAccel.rect.height/2, -2), Quaternion.Euler(0, 0, 0));
-		ButtonBrake.transform.SetPositionAndRotation(new Vector3(canvas.rect.width - ButtonBrake.rect.width / 2, ButtonBrake.rect.height *2, -2), Quaternion.Euler(0, 0, 0));
+		ButtonLeft.transform.SetPositionAndRotation(new Vector3(ButtonLeft.sizeDelta.x/2, ButtonLeft.sizeDelta.y/2, -2), Quaternion.Euler(0, 0, 0));
+		ButtonRight.transform.SetPositionAndRotation(new Vector3(ButtonRight.sizeDelta.x * 3/2 + 5f, ButtonRight.sizeDelta.y/2, -2), Quaternion.Euler(0, 0, 0));
+		ButtonAccel.transform.SetPositionAndRotation(new Vector3(canvas.sizeDelta.x - ButtonAccel.rect.width/2, ButtonAccel.sizeDelta.y/2, -2), Quaternion.Euler(0, 0, 0));
+		ButtonBrake.transform.SetPositionAndRotation(new Vector3(canvas.sizeDelta.x - ButtonAccel.rect.width/2, ButtonAccel.sizeDelta.y + ButtonBrake.sizeDelta.y/2 , -2), Quaternion.Euler(0, 0, 0));		
 	}
 	
 	// Update is called once per frame

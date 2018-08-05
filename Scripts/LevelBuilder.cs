@@ -129,7 +129,6 @@ public class LevelBuilder : MonoBehaviour {
 	private bool CreateSingleLevel()
 	{
 		int tmp = 0;
-		Random random = new Random();
 		for (int i = 0; i < RoadCount; i++)
 		{
 			tmp = i;

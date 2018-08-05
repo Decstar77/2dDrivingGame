@@ -12,7 +12,6 @@ public class CarController : MonoBehaviour {
 	[SerializeField] private float MaxStick = 2.5f;
 	[SerializeField] private float UndersteerValue = 5;
 	[SerializeField] private bool SteeringRealism = false;
-	[SerializeField] private LevelBuilder builder;
 
 	//Platform
 	private bool android = false;
@@ -28,21 +27,24 @@ public class CarController : MonoBehaviour {
 	private float VelocityDirection;
 	private float VelocityAmount;
 
-
 	float vertInp = 0;
 	float hortInp = 0;
 	private Rigidbody2D ri;
+	private SingleLevelGenerator level;
+
 	void Start() {
 #if UNITY_ANDROID
 		android = true;
 #endif
 		TurnDirection = VelocityDirection = 0;
 		TurnAmount = VelocityAmount = 0;
-		builder = GetComponent<LevelBuilder>();
 		ri = GetComponent<Rigidbody2D>();
+		level = GetComponent<SingleLevelGenerator>();
 		ri.gravityScale = 0;
 		SSteeringRealismInt = 1;
-
+		Quaternion angle = new Quaternion();
+		transform.position = level.GetStart(ref angle);
+		transform.rotation = angle;
 	}
 
 	private void FixedUpdate()
@@ -77,12 +79,15 @@ public class CarController : MonoBehaviour {
 	private void OnTriggerEnter2D(Collider2D collision)
 	{
 		GameObject collider = collision.gameObject;
-
-		builder.PassedRoad(collider);
+		if (collider == level.GetFinishRoad())
+		{
+			Debug.Log("Finsihed");
+		}
 	}
 	private Vector2 ForwardVelocity()
 	{
-		return transform.up * Vector2.Dot(ri.velocity, transform.up);
+		//Debug.Log("Velo " + ri.velocity + "Tran " + transform.up + "Vec " + Vector2.Dot(ri.velocity, transform.up) * transform.up);
+		return transform.up * Vector2.Dot(ri.velocity, transform.up);		
 	}
 	private Vector2 SideWaysVelocity()
 	{
@@ -104,6 +109,19 @@ public class CarController : MonoBehaviour {
 			return VelocityAmount;
 		return VelocityAmount;
 	}
+
+
+
+
+
+
+
+
+
+
+
+
+	//Buttons
 	public void TurnRightButtonDown()
 	{
 
